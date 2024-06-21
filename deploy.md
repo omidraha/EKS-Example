@@ -306,7 +306,7 @@ aws eks create-nodegroup \
 aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION
 ```
 
-### Apply the AWS-auth ConfigMap to allow nodes to join the cluster
+## Step 12: Apply the AWS-auth ConfigMap to allow nodes to join the cluster
 
 ```bash
 cat <<EOF | kubectl apply -f -
@@ -325,7 +325,7 @@ data:
 EOF
 ```
 
-## Step 12: (Optional) Verify the Node Group
+## Step 13: (Optional) Verify the Node Group
 
 
 You can verify that the nodes are properly added to your EKS cluster by checking the nodes in your cluster:
