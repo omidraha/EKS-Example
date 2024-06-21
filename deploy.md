@@ -2,13 +2,13 @@
 
 ### Replace with your region
 
-```
+```bash
 REGION="us-east-2"
 ```
 
 ### Replace with your zone
 
-```
+```bash
 ZONE_A="us-east-2a"
 ZONE_B="us-east-2b"
 ZONE_C="us-east-2c"
@@ -16,31 +16,31 @@ ZONE_C="us-east-2c"
 
 ### Replace with the latest Amazon EKS optimized AMI ID for your region
 
-```
+```bash
 IMAGE_ID="ami-00a6b3fc0980ea63f"
 ```
 
 ### Required instance type
 
-```
+```bash
 InstanceType="c6a.xlarge"
 ```
 ### Replace with your key pair name
 
-```
+```bash
 KeyName="key-res1-0-40be8fb"
 ```
 
 ### Create a VPC
 
-```
+```bash
 VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --region $REGION --query 'Vpc.VpcId' --output text)
 aws ec2 create-tags --resources $VPC_ID --tags Key=Name,Value=my-vpc --region $REGION
 ```
 
 ### Create Private Subnets in Three Availability Zones
 
-```
+```bash
 PRIVATE_SUBNET_ID_1=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --region $REGION --availability-zone $ZONE_A --query 'Subnet.SubnetId' --output text)
 aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_1 --tags Key=Name,Value=my-private-subnet-1 --region $REGION
 
@@ -53,7 +53,7 @@ aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_3 --tags Key=Name,Value=my-pr
 
 ### Create a Public Subnet for the NAT Gateway
 
-```
+```bash
 PUBLIC_SUBNET_ID=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.4.0/24  --region $REGION --availability-zone $ZONE_A --query 'Subnet.SubnetId' --output text)
 aws ec2 create-tags --resources $PUBLIC_SUBNET_ID --tags Key=Name,Value=my-public-subnet --region $REGION
 ```
@@ -61,14 +61,14 @@ aws ec2 create-tags --resources $PUBLIC_SUBNET_ID --tags Key=Name,Value=my-publi
 
 ### Create the Internet Gateway
 
-```
+```bash
 IGW_ID=$(aws ec2 create-internet-gateway --region $REGION --query 'InternetGateway.InternetGatewayId' --output text)
 aws ec2 create-tags --resources $IGW_ID --tags Key=Name,Value=my-internet-gateway --region $REGION
 ```
 
 ### Attach the Internet Gateway to the VPC
 
-```
+```bash
 aws ec2 attach-internet-gateway --vpc-id $VPC_ID --internet-gateway-id $IGW_ID --region $REGION
 ```
 
@@ -76,14 +76,14 @@ aws ec2 attach-internet-gateway --vpc-id $VPC_ID --internet-gateway-id $IGW_ID -
 
 ### Allocate an Elastic IP for the NAT Gateway
 
-```
+```bash
 EIP_ALLOC_ID=$(aws ec2 allocate-address --domain vpc --region $REGION --query 'AllocationId' --output text)
 aws ec2 create-tags --resources $EIP_ALLOC_ID --tags Key=Name,Value=my-eip --region $REGION
 ```
 
 ### Create the NAT Gateway in the Public Subnet
 
-```
+```bash
 NAT_GW_ID=$(aws ec2 create-nat-gateway --subnet-id $PUBLIC_SUBNET_ID --allocation-id $EIP_ALLOC_ID --region $REGION --query 'NatGateway.NatGatewayId' --output text)
 aws ec2 create-tags --resources $NAT_GW_ID --tags Key=Name,Value=my-nat-gateway --region $REGION
 aws ec2 wait nat-gateway-available --nat-gateway-ids $NAT_GW_ID --region $REGION
@@ -93,20 +93,20 @@ aws ec2 wait nat-gateway-available --nat-gateway-ids $NAT_GW_ID --region $REGION
 
 ### Create a Private Route Table
 
-```
+```bash
 PRIVATE_ROUTE_TABLE_ID=$(aws ec2 create-route-table --vpc-id $VPC_ID --region $REGION --query 'RouteTable.RouteTableId' --output text)
 aws ec2 create-tags --resources $PRIVATE_ROUTE_TABLE_ID --tags Key=Name,Value=my-private-route-table --region $REGION
 ```
 
 ### Create a Route to the NAT Gateway
 
-```
+```bash
 aws ec2 create-route --route-table-id $PRIVATE_ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --gateway-id $NAT_GW_ID --region $REGION
 ```
 
 ### Associate the Private Route Table with the Private Subnets
 
-```
+```bash
 aws ec2 associate-route-table --route-table-id $PRIVATE_ROUTE_TABLE_ID --subnet-id $PRIVATE_SUBNET_ID_1 --region $REGION
 aws ec2 associate-route-table --route-table-id $PRIVATE_ROUTE_TABLE_ID --subnet-id $PRIVATE_SUBNET_ID_2 --region $REGION
 aws ec2 associate-route-table --route-table-id $PRIVATE_ROUTE_TABLE_ID --subnet-id $PRIVATE_SUBNET_ID_3 --region $REGION
@@ -114,20 +114,20 @@ aws ec2 associate-route-table --route-table-id $PRIVATE_ROUTE_TABLE_ID --subnet-
 
 ### Create a Public Route Table
 
-```
+```bash
 PUBLIC_ROUTE_TABLE_ID=$(aws ec2 create-route-table --vpc-id $VPC_ID --region $REGION --query 'RouteTable.RouteTableId' --output text)
 aws ec2 create-tags --resources $PUBLIC_ROUTE_TABLE_ID --tags Key=Name,Value=my-public-route-table --region $REGION
 ```
 
 ### Create a Route to the Internet Gateway in the Public Route Table
 
-```
+```bash
 aws ec2 create-route --route-table-id $PUBLIC_ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --gateway-id $IGW_ID --region $REGION
 ```
 
 ### Associate the Public Route Table with the Public Subnet
 
-```
+```bash
 aws ec2 associate-route-table --route-table-id $PUBLIC_ROUTE_TABLE_ID --subnet-id $PUBLIC_SUBNET_ID --region $REGION
 ```
 
@@ -135,7 +135,7 @@ aws ec2 associate-route-table --route-table-id $PUBLIC_ROUTE_TABLE_ID --subnet-i
 
 ### Create a trust relationship policy document for EKS
 
-```
+```bash
 cat <<EOF > eks-trust-policy.json
 {
   "Version": "2012-10-17",
@@ -154,14 +154,14 @@ EOF
 
 ### Create the IAM role
 
-```
+```bash
 ROLE_NAME="myAmazonEKSClusterRole"
 ROLE_ARN=$(aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://eks-trust-policy.json  --region $REGION --query 'Role.Arn' --output text) 
 ```
 
 ### Attach the AmazonEKSClusterPolicy managed policy to the role
 
-```
+```bash
 aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
 ```
 
@@ -169,14 +169,14 @@ aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:
 
 ### Create a security group
 
-```
+```bash
 SG_ID=$(aws ec2 create-security-group --group-name my-eks-sg --description "Security group for EKS cluster" --vpc-id $VPC_ID --region $REGION --query 'GroupId' --output text)
 aws ec2 create-tags --resources $SG_ID --tags Key=Name,Value=my-eks-sg --region $REGION
 ```
 
 ### Authorize inbound rules for the security group
 
-```
+```bash
 aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 80 --cidr 0.0.0.0/0 --region $REGION
 aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 443 --cidr 0.0.0.0/0 --region $REGION
 aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol all --port all --source-group $SG_ID --region $REGION
@@ -185,7 +185,7 @@ aws ec2 authorize-security-group-egress --group-id $SG_ID --protocol -1 --port a
 
 ### Authorize Outbound rules for the security group
 
-```
+```bash
 aws ec2 authorize-security-group-egress --group-id $SG_ID --protocol tcp --port 443 --cidr 0.0.0.0/0 --region $REGION
 aws ec2 authorize-security-group-egress --group-id $SG_ID --protocol tcp --port 10250 --cidr 0.0.0.0/0 --region $REGION
 aws ec2 authorize-security-group-egress --group-id $SG_ID --protocol tcp --port 53 --cidr 0.0.0.0/0 --region $REGION
@@ -196,7 +196,7 @@ aws ec2 authorize-security-group-egress --group-id $SG_ID --protocol udp --port 
 
 ### Create the EKS cluster
 
-```
+```bash
 CLUSTER_NAME="my-cluster"
 
 CLUSTER_ARN=$(aws eks create-cluster \
@@ -215,7 +215,7 @@ CLUSTER_ARN=$(aws eks create-cluster \
 ### Create a trust relationship policy document for EKS Nodes
 
 
-```
+```bash
 cat <<EOF > eks-node-trust-policy.json
 {
   "Version": "2012-10-17",
@@ -234,14 +234,14 @@ EOF
 
 ### Create the IAM role
 
-```
+```bash
 NODE_ROLE_NAME="myAmazonEKSNodeRole"
 NODE_ROLE_ARN=$(aws iam create-role --role-name $NODE_ROLE_NAME --assume-role-policy-document file://eks-node-trust-policy.json --region $REGION --query 'Role.Arn' --output text)
 ```
 
 ### Attach managed policies to the role
 
-```
+```bash
 aws iam attach-role-policy --role-name $NODE_ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
 aws iam attach-role-policy --role-name $NODE_ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
 aws iam attach-role-policy --role-name $NODE_ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
@@ -249,7 +249,7 @@ aws iam attach-role-policy --role-name $NODE_ROLE_NAME --policy-arn arn:aws:iam:
 
 ### Create the Instance Profile and add the role to it
 
-```
+```bash
 INSTANCE_PROFILE_NAME="myAmazonEKSNodeInstanceProfile"
 
 INSTANCE_PROFILE_ARN=$(aws iam create-instance-profile --instance-profile-name $INSTANCE_PROFILE_NAME --query 'InstanceProfile.Arn' --output text)
@@ -261,7 +261,7 @@ aws iam add-role-to-instance-profile --instance-profile-name $INSTANCE_PROFILE_N
 
 ### Create a launch template for the EKS nodes
 
-```
+```bash
 TEMPLATE_NAME="my-eks-node-template"
 
 LAUNCH_TEMPLATE_ID=$(aws ec2 create-launch-template --launch-template-name $TEMPLATE_NAME --version-description "EKS Node Template" --launch-template-data '{
@@ -285,7 +285,7 @@ LAUNCH_TEMPLATE_ID=$(aws ec2 create-launch-template --launch-template-name $TEMP
 
 ## Step 10: Create Node Group
 
-```
+```bash
 NODE_GROUP="my-node-group"
 
 aws eks create-nodegroup \
@@ -302,13 +302,13 @@ aws eks create-nodegroup \
 
 ### Update the EKS cluster configuration to use the new node group
 
-```
+```bash
 aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION
 ```
 
 ### Apply the AWS-auth ConfigMap to allow nodes to join the cluster
 
-```
+```bash
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: ConfigMap
@@ -330,6 +330,6 @@ EOF
 
 You can verify that the nodes are properly added to your EKS cluster by checking the nodes in your cluster:
 
-```
+```bash
 kubectl get nodes
 ```
