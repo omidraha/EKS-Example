@@ -25,6 +25,7 @@ IMAGE_ID="ami-00a6b3fc0980ea63f"
 ```bash
 InstanceType="c6a.xlarge"
 ```
+
 ### Replace with your key pair name
 
 ```bash
@@ -57,6 +58,7 @@ aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_3 --tags Key=Name,Value=my-pr
 PUBLIC_SUBNET_ID=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.4.0/24  --region $REGION --availability-zone $ZONE_A --query 'Subnet.SubnetId' --output text)
 aws ec2 create-tags --resources $PUBLIC_SUBNET_ID --tags Key=Name,Value=my-public-subnet --region $REGION
 ```
+
 ## Step 2: Create and Attach Internet Gateway
 
 ### Create the Internet Gateway
@@ -209,11 +211,9 @@ CLUSTER_ARN=$(aws eks create-cluster \
   --output text)
 ```
 
-
 ## Step 8: Create an IAM Role for the EKS Nodes
 
 ### Create a trust relationship policy document for EKS Nodes
-
 
 ```bash
 cat <<EOF > eks-node-trust-policy.json
@@ -327,9 +327,56 @@ EOF
 
 ## Step 13: (Optional) Verify the Node Group
 
-
 You can verify that the nodes are properly added to your EKS cluster by checking the nodes in your cluster:
 
 ```bash
 kubectl get nodes
 ```
+
+## Delete created resources
+
+aws eks delete-nodegroup --cluster-name $CLUSTER_NAME --nodegroup-name $NODE_GROUP --region $REGION
+aws eks describe-nodegroup --cluster-name $CLUSTER_NAME --nodegroup-name $NODE_GROUP --region $REGION
+aws eks delete-cluster --name $CLUSTER_NAME --region $REGION
+aws iam detach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy --region $REGION
+aws iam detach-role-policy --role-name $NODE_ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy --region $REGION
+aws iam detach-role-policy --role-name $NODE_ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy --region $REGION
+aws iam detach-role-policy --role-name $NODE_ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly --region $REGION
+aws iam remove-role-from-instance-profile --instance-profile-name $INSTANCE_PROFILE_NAME --role-name $NODE_ROLE_NAME --region $REGION
+aws iam delete-instance-profile --instance-profile-name $INSTANCE_PROFILE_NAME --region $REGION
+aws iam delete-role --role-name $ROLE_NAME --region $REGION
+aws iam delete-role --role-name $NODE_ROLE_NAME --region $REGION
+
+aws ec2 delete-launch-template --launch-template-id $LAUNCH_TEMPLATE_ID --region $REGION
+
+aws ec2 describe-network-interfaces --filters "Name=group-id,Values=$SG_ID" --region $REGION --query 'NetworkInterfaces[*].NetworkInterfaceId' --output text
+
+ENIs=$(aws ec2 describe-network-interfaces --filters "Name=group-id,Values=$SG_ID" --region $REGION --query 'NetworkInterfaces[*].NetworkInterfaceId' --output text)
+
+for ENI in $ENIs; do
+  ATTACHMENT_ID=$(aws ec2 describe-network-interfaces --network-interface-ids $ENI --region $REGION --query 'NetworkInterfaces[0].Attachment.AttachmentId' --output text)
+  if [ "$ATTACHMENT_ID" != "null" ]; then
+    aws ec2 detach-network-interface --attachment-id $ATTACHMENT_ID --region $REGION
+  fi
+  aws ec2 delete-network-interface --network-interface-id $ENI --region $REGION
+done
+
+aws ec2 release-address --allocation-id $EIP_ALLOC_ID --region $REGION
+
+aws ec2 delete-nat-gateway --nat-gateway-id $NAT_GW_ID --region $REGION
+aws ec2 wait nat-gateway-deleted --nat-gateway-id $NAT_GW_ID --region $REGION
+
+aws ec2 delete-security-group --group-id $SG_ID --region $REGION
+
+aws ec2 detach-internet-gateway --internet-gateway-id $IGW_ID --vpc-id $VPC_ID --region $REGION
+aws ec2 delete-internet-gateway --internet-gateway-id $IGW_ID --region $REGION
+
+aws ec2 delete-subnet --subnet-id $PRIVATE_SUBNET_ID_1 --region $REGION
+aws ec2 delete-subnet --subnet-id $PRIVATE_SUBNET_ID_2 --region $REGION
+aws ec2 delete-subnet --subnet-id $PRIVATE_SUBNET_ID_3 --region $REGION
+aws ec2 delete-subnet --subnet-id $PUBLIC_SUBNET_ID --region $REGION
+
+aws ec2 delete-route-table --route-table-id $PRIVATE_ROUTE_TABLE_ID --region $REGION
+aws ec2 delete-route-table --route-table-id $PUBLIC_ROUTE_TABLE_ID --region $REGION
+
+aws ec2 delete-vpc --vpc-id $VPC_ID --region $REGION
