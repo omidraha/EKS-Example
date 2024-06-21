@@ -335,6 +335,7 @@ kubectl get nodes
 
 ## Delete created resources
 
+```bash
 aws eks delete-nodegroup --cluster-name $CLUSTER_NAME --nodegroup-name $NODE_GROUP --region $REGION
 aws eks describe-nodegroup --cluster-name $CLUSTER_NAME --nodegroup-name $NODE_GROUP --region $REGION
 aws eks delete-cluster --name $CLUSTER_NAME --region $REGION
@@ -380,3 +381,4 @@ aws ec2 delete-route-table --route-table-id $PRIVATE_ROUTE_TABLE_ID --region $RE
 aws ec2 delete-route-table --route-table-id $PUBLIC_ROUTE_TABLE_ID --region $REGION
 
 aws ec2 delete-vpc --vpc-id $VPC_ID --region $REGION
+```
