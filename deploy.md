@@ -28,11 +28,12 @@ DesiredSize=2
 ### Replace with your key pair name
 
 ```bash
-KeyName="key-res1-0-40be8fb"
+KeyName="my-key"
 CLUSTER_NAME="my-cluster"
 NODE_ROLE_NAME="myAmazonEKSNodeRole"
 INSTANCE_PROFILE_NAME="myAmazonEKSNodeInstanceProfile"
 NODE_GROUP_NAME="my-node-group"
+INSTANCE_NAME_PREFIX="my-instance"
 ```
 
 ### Set resource names
@@ -271,8 +272,6 @@ aws eks create-nodegroup \
 ```
 
 ### Add tag to created instances of node group
-
-INSTANCE_NAME_PREFIX="my-instance"
 
 ```bash
 INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:eks:nodegroup-name,Values=$NODE_GROUP_NAME"  --region $REGION   --query "Reservations[*].Instances[*].InstanceId" --output text)
