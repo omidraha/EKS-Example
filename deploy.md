@@ -14,23 +14,30 @@ ZONE_B="us-east-2b"
 ZONE_C="us-east-2c"
 ```
 
-### Replace with the latest Amazon EKS optimized AMI ID for your region
-
-```bash
-IMAGE_ID="ami-00a6b3fc0980ea63f"
-```
-
 ### Required instance type
 
 ```bash
-InstanceType="c6a.xlarge"
+InstanceType="t2.micro"
+DiskSize=20
+AMIType="AL2_x86_64"
+MinSize=1
+MaxSize=2
+DesiredSize=2
 ```
 
 ### Replace with your key pair name
 
 ```bash
 KeyName="key-res1-0-40be8fb"
+CLUSTER_NAME="my-cluster"
+NODE_ROLE_NAME="myAmazonEKSNodeRole"
+INSTANCE_PROFILE_NAME="myAmazonEKSNodeInstanceProfile"
+NODE_GROUP_NAME="my-node-group"
 ```
+
+### Set resource names
+
+ROLE_NAME="myAmazonEKSClusterRole"
 
 ### Create a VPC
 
@@ -157,7 +164,6 @@ EOF
 ### Create the IAM role
 
 ```bash
-ROLE_NAME="myAmazonEKSClusterRole"
 ROLE_ARN=$(aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://eks-trust-policy.json  --region $REGION --query 'Role.Arn' --output text) 
 ```
 
@@ -199,7 +205,6 @@ aws ec2 authorize-security-group-egress --group-id $SG_ID --protocol udp --port 
 ### Create the EKS cluster
 
 ```bash
-CLUSTER_NAME="my-cluster"
 
 CLUSTER_ARN=$(aws eks create-cluster \
   --region $REGION \
@@ -235,7 +240,6 @@ EOF
 ### Create the IAM role
 
 ```bash
-NODE_ROLE_NAME="myAmazonEKSNodeRole"
 NODE_ROLE_ARN=$(aws iam create-role --role-name $NODE_ROLE_NAME --assume-role-policy-document file://eks-node-trust-policy.json --region $REGION --query 'Role.Arn' --output text)
 ```
 
@@ -250,55 +254,38 @@ aws iam attach-role-policy --role-name $NODE_ROLE_NAME --policy-arn arn:aws:iam:
 ### Create the Instance Profile and add the role to it
 
 ```bash
-INSTANCE_PROFILE_NAME="myAmazonEKSNodeInstanceProfile"
-
 INSTANCE_PROFILE_ARN=$(aws iam create-instance-profile --instance-profile-name $INSTANCE_PROFILE_NAME --query 'InstanceProfile.Arn' --output text)
-
 aws iam add-role-to-instance-profile --instance-profile-name $INSTANCE_PROFILE_NAME --role-name $NODE_ROLE_NAME
 ```
 
-## Step 9: Create a Launch Template for the EKS Nodes
-
-### Create a launch template for the EKS nodes
+## Step 9: Create Node Group
 
 ```bash
-TEMPLATE_NAME="my-eks-node-template"
-
-LAUNCH_TEMPLATE_ID=$(aws ec2 create-launch-template --launch-template-name $TEMPLATE_NAME --version-description "EKS Node Template" --launch-template-data '{
-  "ImageId": "'$IMAGE_ID'",
-  "InstanceType": "'$InstanceType'",
-  "KeyName": "'$KeyName'",
-  "SecurityGroupIds": ["'$SG_ID'"],
-  "TagSpecifications": [
-    {
-      "ResourceType": "instance",
-      "Tags": [
-        {
-          "Key": "Name",
-          "Value": "'$TEMPLATE_NAME'"
-        }
-      ]
-    }
-  ]
-}' --region $REGION --query 'LaunchTemplate.LaunchTemplateId' --output text)
-```
-
-## Step 10: Create Node Group
-
-```bash
-NODE_GROUP="my-node-group"
-
 aws eks create-nodegroup \
   --cluster-name $CLUSTER_NAME \
-  --nodegroup-name $NODE_GROUP \
+  --nodegroup-name $NODE_GROUP_NAME \
   --node-role $NODE_ROLE_ARN \
   --subnets $PRIVATE_SUBNET_ID_1 $PRIVATE_SUBNET_ID_2 $PRIVATE_SUBNET_ID_3 \
-  --scaling-config minSize=1,maxSize=3,desiredSize=2 \
-  --launch-template id=$LAUNCH_TEMPLATE_ID,version=1 \
-  --region $REGION
+  --scaling-config minSize=$MinSize,maxSize=$MaxSize,desiredSize=$DesiredSize \
+  --instance-types $InstanceType --disk-size $DiskSize --ami-type $AMIType --region $REGION 
 ```
 
-## Step 11: Update the EKS Cluster Configuration
+### Add tag to created instances of node group
+
+INSTANCE_NAME_PREFIX="my-instance"
+
+```bash
+INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:eks:nodegroup-name,Values=$NODE_GROUP_NAME"  --region $REGION   --query "Reservations[*].Instances[*].InstanceId" --output text)
+COUNTER=1
+for INSTANCE_ID in $INSTANCE_IDS; do
+  INSTANCE_NAME="${NODE_GROUP_NAME}-${INSTANCE_NAME_PREFIX}-${COUNTER}"
+  echo "Tagging instance $INSTANCE_ID with Name=$INSTANCE_NAME"
+  aws ec2 create-tags --resources $INSTANCE_ID --tags Key=Name,Value=$INSTANCE_NAME --region $REGION
+  COUNTER=$((COUNTER+1))
+done
+```
+
+## Step 10: Update the EKS Cluster Configuration
 
 ### Update the EKS cluster configuration to use the new node group
 
@@ -306,7 +293,7 @@ aws eks create-nodegroup \
 aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION
 ```
 
-## Step 12: Apply the AWS-auth ConfigMap to allow nodes to join the cluster
+## Step 11: Apply the AWS-auth ConfigMap to allow nodes to join the cluster
 
 ```bash
 cat <<EOF | kubectl apply -f -
@@ -325,7 +312,7 @@ data:
 EOF
 ```
 
-## Step 13: (Optional) Verify the Node Group
+## Step 12: (Optional) Verify the Node Group
 
 You can verify that the nodes are properly added to your EKS cluster by checking the nodes in your cluster:
 
@@ -335,10 +322,22 @@ kubectl get nodes
 
 ## Delete created resources
 
+### Delete node group
+
 ```bash
-aws eks delete-nodegroup --cluster-name $CLUSTER_NAME --nodegroup-name $NODE_GROUP --region $REGION
-aws eks describe-nodegroup --cluster-name $CLUSTER_NAME --nodegroup-name $NODE_GROUP --region $REGION
+aws eks delete-nodegroup --cluster-name $CLUSTER_NAME --nodegroup-name $NODE_GROUP_NAME --region $REGION
+aws eks describe-nodegroup --cluster-name $CLUSTER_NAME --nodegroup-name $NODE_GROUP_NAME --region $REGION
+```
+
+### Delete cluster
+
+```bash
 aws eks delete-cluster --name $CLUSTER_NAME --region $REGION
+```
+
+### Delete IAM Role Policy
+
+```bash
 aws iam detach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy --region $REGION
 aws iam detach-role-policy --role-name $NODE_ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy --region $REGION
 aws iam detach-role-policy --role-name $NODE_ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy --region $REGION
@@ -347,9 +346,17 @@ aws iam remove-role-from-instance-profile --instance-profile-name $INSTANCE_PROF
 aws iam delete-instance-profile --instance-profile-name $INSTANCE_PROFILE_NAME --region $REGION
 aws iam delete-role --role-name $ROLE_NAME --region $REGION
 aws iam delete-role --role-name $NODE_ROLE_NAME --region $REGION
+```
 
+### Delete launch template
+
+```bash
 aws ec2 delete-launch-template --launch-template-id $LAUNCH_TEMPLATE_ID --region $REGION
+```
 
+### Delete network interface
+
+```bash
 aws ec2 describe-network-interfaces --filters "Name=group-id,Values=$SG_ID" --region $REGION --query 'NetworkInterfaces[*].NetworkInterfaceId' --output text
 
 ENIs=$(aws ec2 describe-network-interfaces --filters "Name=group-id,Values=$SG_ID" --region $REGION --query 'NetworkInterfaces[*].NetworkInterfaceId' --output text)
@@ -361,24 +368,50 @@ for ENI in $ENIs; do
   fi
   aws ec2 delete-network-interface --network-interface-id $ENI --region $REGION
 done
+```
 
+### Release EIP
+
+```bash
 aws ec2 release-address --allocation-id $EIP_ALLOC_ID --region $REGION
+```
 
+### Delete NAT Gateway
+
+```bash
 aws ec2 delete-nat-gateway --nat-gateway-id $NAT_GW_ID --region $REGION
 aws ec2 wait nat-gateway-deleted --nat-gateway-id $NAT_GW_ID --region $REGION
+```
 
+### Delete Security Group
+
+```bash
 aws ec2 delete-security-group --group-id $SG_ID --region $REGION
+```
 
+### Delete Internet GateWay
+
+```bash
 aws ec2 detach-internet-gateway --internet-gateway-id $IGW_ID --vpc-id $VPC_ID --region $REGION
 aws ec2 delete-internet-gateway --internet-gateway-id $IGW_ID --region $REGION
+```
 
+### Delete Subnet
+
+```bash
 aws ec2 delete-subnet --subnet-id $PRIVATE_SUBNET_ID_1 --region $REGION
 aws ec2 delete-subnet --subnet-id $PRIVATE_SUBNET_ID_2 --region $REGION
 aws ec2 delete-subnet --subnet-id $PRIVATE_SUBNET_ID_3 --region $REGION
 aws ec2 delete-subnet --subnet-id $PUBLIC_SUBNET_ID --region $REGION
+```
+### Delete Route table
 
+```bash
 aws ec2 delete-route-table --route-table-id $PRIVATE_ROUTE_TABLE_ID --region $REGION
 aws ec2 delete-route-table --route-table-id $PUBLIC_ROUTE_TABLE_ID --region $REGION
+```
+### Delete VPC
 
+```bash
 aws ec2 delete-vpc --vpc-id $VPC_ID --region $REGION
 ```
