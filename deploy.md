@@ -235,7 +235,7 @@ CLUSTER_ARN=$(aws eks create-cluster \
   --name $CLUSTER_NAME \
   --kubernetes-version 1.30 \
   --role-arn $ROLE_ARN \
-  --resources-vpc-config subnetIds=$PRIVATE_SUBNET_ID_1,$PRIVATE_SUBNET_ID_2,$PRIVATE_SUBNET_ID_3,securityGroupIds=$SG_ID \
+  --resources-vpc-config endpointPublicAccess=false,endpointPrivateAccess=true,subnetIds=$PRIVATE_SUBNET_ID_1,$PRIVATE_SUBNET_ID_2,$PRIVATE_SUBNET_ID_3,securityGroupIds=$SG_ID \
   --query 'cluster.arn' \
   --output text)
 ```
@@ -245,6 +245,8 @@ CLUSTER_ARN=$(aws eks create-cluster \
 ```bash
 aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION
 ```
+
+#### Note: You need to be in the current VPC for the commands to use `kubectl`.
 
 ### Get cluster nodes and pods
 

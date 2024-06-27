@@ -93,3 +93,7 @@ https://docs.aws.amazon.com/code-library/latest/ug/eks_example_eks_CreateNodegro
 https://docs.aws.amazon.com/eks/latest/userguide/troubleshooting.html#worker-node-fail
 
 https://docs.aws.amazon.com/eks/latest/userguide/troubleshooting.html#instances-failed-to-join
+
+https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html
+
+https://docs.aws.amazon.com/cli/latest/reference/eks/create-cluster.html
