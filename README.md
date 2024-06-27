@@ -60,7 +60,7 @@ The cluster is designed to be accessible for internet downloads while not being 
 16. **Create Security Group for ElastiCache**:
     - Create a security group for ElastiCache and authorize necessary inbound rules.
     
-17. **Create Cache Subnet Group**:
+17. **Create ElastiCache Subnet Group**:
     - Create a cache subnet group for ElastiCache.
 
 18. **Create ElastiCache Cluster**:
