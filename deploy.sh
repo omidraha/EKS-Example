@@ -188,7 +188,7 @@ EOF
 ### Create the IAM role
 
 ```bash
-ROLE_ARN=$(aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://eks-trust-policy.json  --region $REGION --query 'Role.Arn' --output text) 
+ROLE_ARN=$(aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://eks-trust-policy.json  --region $REGION --query 'Role.Arn' --output text)
 ```
 
 ### Attach the AmazonEKSClusterPolicy managed policy to the role
