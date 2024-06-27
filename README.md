@@ -2,9 +2,13 @@
 
 ## Purpose
 
-This script automates the creation of an Amazon EKS cluster that is distributed across three availability zones.
+This script automates the creation and configuration of an Amazon EKS cluster distributed across three availability zones. 
 
-The cluster is designed to be accessible for internet downloads while not being directly accessible from the internet.
+The setup includes a private VPC with private subnets for the cluster nodes and a public subnet for the NAT gateway. 
+
+This configuration ensures that while the cluster can access the internet for updates and downloads, 
+it remains secure by not being directly accessible from the internet.
+
 
 ## Steps Overview
 
