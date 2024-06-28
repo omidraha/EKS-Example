@@ -24,13 +24,13 @@ VPC_CIDR="10.0.0.0/16"
 
 ```bash
 IMAGE_ID="ami-0854d447c9bdaed9a"
-InstanceType="t2.micro"
+InstanceType="t3.medium"
 DiskSize=20
 AMIType="AL2_x86_64"
-MinSize=1
-MaxSize=1
-DesiredSize=1
-MAX_PODS="110"
+MinSize=3
+MaxSize=3
+DesiredSize=3
+MAX_PODS="50"
 ```
 
 ### Define variable for resource name
@@ -252,10 +252,40 @@ aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION
 
 ```bash
  kubectl get nodes -o wide
- kubectl get pods -o wide
+ kubectl get pods -A -o wide
 ```
 
-## Step 8: Create an IAM Role for the EKS Nodes
+## Step 8: Associate IAM OIDC Provider and Retrieve OIDC URL and ARN for EKS Cluster
+
+#### Associate the IAM OIDC provider with the EKS cluster
+
+```bash
+eksctl utils associate-iam-oidc-provider --cluster  $CLUSTER_NAME --region $REGION  --approve
+```
+
+#### Retrieve the OIDC URL for the EKS cluster
+
+```bash
+oidc_url=$(aws eks describe-cluster --name $CLUSTER_NAME --region $REGION --query "cluster.identity.oidc.issuer" --output text)
+```
+#### Extract the OIDC ID from the URL
+
+```bash
+oidc_id=$(echo $oidc_url | cut -d '/' -f5)
+```
+#### Get the OIDC ARN by matching the OIDC ID with existing providers
+
+```bash
+oidc_arn=$(aws iam list-open-id-connect-providers | grep $oidc_id | cut -d '"' -f4)
+```
+#### Output the OIDC URL and ARN
+
+```bash
+echo "OIDC URL: $oidc_url"
+echo "OIDC ARN: $oidc_arn"
+```
+
+## Step 9: Create an IAM Role for the EKS Nodes
 
 ### Create a trust relationship policy document for EKS Nodes
 
@@ -297,7 +327,7 @@ INSTANCE_PROFILE_ARN=$(aws iam create-instance-profile --instance-profile-name $
 aws iam add-role-to-instance-profile --instance-profile-name $INSTANCE_PROFILE_NAME --role-name $NODE_ROLE_NAME
 ```
 
-## Step 9: Create a Launch Template for the EKS Nodes
+## Step 10: Create a Launch Template for the EKS Nodes
 
 ### Create a launch template for the EKS nodes
 
@@ -392,7 +422,7 @@ echo "Launch Template ID: $LAUNCH_TEMPLATE_ID"
 
 
 
-## Step 10: Create Node Group
+## Step 11: Create Node Group
 ```bash
 NODE_GROUP_ID=$(aws eks create-nodegroup \
   --cluster-name $CLUSTER_NAME \
@@ -423,7 +453,7 @@ for INSTANCE_ID in $INSTANCE_IDS; do
 done
 ```
 
-## Step 11: Update the EKS Cluster Configuration
+## Step 12: Update the EKS Cluster Configuration
 
 ### Update the EKS cluster configuration to use the new node group
 
@@ -431,7 +461,7 @@ done
 aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION
 ```
 
-## Step 12: Apply the AWS-auth ConfigMap to allow nodes to join the cluster
+## Step 13: Apply the AWS-auth ConfigMap to allow nodes to join the cluster
 
 ```bash
 cat <<EOF | kubectl apply -f -
@@ -450,7 +480,7 @@ data:
 EOF
 ```
 
-## Step 13: (Optional) Verify the Node Group
+## Step 14: (Optional) Verify the Node Group
 
 You can verify that the nodes are properly added to your EKS cluster by checking the nodes in your cluster:
 
@@ -458,7 +488,7 @@ You can verify that the nodes are properly added to your EKS cluster by checking
 kubectl get nodes
 ```
 
-## Step 14: Create certificate
+## Step 15: Create certificate
 
 ```bash
 # Request the ACM Certificate and retrieve the Domain Validation Options
@@ -501,7 +531,7 @@ while true; do
 done
 ```
 
-## Step 15: Create Security Group for ElastiCache
+## Step 16: Create Security Group for ElastiCache
 
 ### Create a security group for ElastiCache
 
@@ -517,7 +547,7 @@ aws ec2 create-tags --resources $CACHE_SG_ID --tags Key=Name,Value=my-elastic-ca
 aws ec2 authorize-security-group-ingress --group-id $CACHE_SG_ID --protocol tcp --port 6379 --source-group $SG_ID --region $REGION
 ```
 
-## Step 16: Create Cache Subnet Group
+## Step 17: Create Cache Subnet Group
 
 ### Create a cache subnet group for ElastiCache
 
@@ -535,7 +565,7 @@ echo "Cache Subnet Group ID: $CACHE_SUBNET_GROUP_ID"
 ```
 
 
-## Step 17: Create ElastiCache Cluster
+## Step 18: Create ElastiCache Cluster
 
 ### Create the ElastiCache cluster within the VPC
 
@@ -555,7 +585,7 @@ CACHE_CLUSTER_STATUS=$(aws elasticache create-cache-cluster \
 echo "Cache Cluster ID: $CACHE_CLUSTER_ID"
 ```
 
-## Step 18: Create Security Group for RDS
+## Step 19: Create Security Group for RDS
 
 ### Create a security group for RDS
 
@@ -576,7 +606,7 @@ aws ec2 authorize-security-group-ingress --group-id $RDS_SG_ID --protocol tcp --
 aws ec2 authorize-security-group-egress --group-id $RDS_SG_ID --protocol -1 --port all --cidr 0.0.0.0/0 --region $REGION
 ```
 
-## Step 19: Create RDS Subnet Group
+## Step 20: Create RDS Subnet Group
 
 ### Create a subnet group for RDS
 
@@ -596,7 +626,7 @@ RDS_SUBNET_GROUP_ID=$(aws rds create-db-subnet-group \
 echo "RDS Subnet Group ID: $RDS_SUBNET_GROUP_ID"
 ```
 
-## Step 20: Create RDS Instance
+## Step 21: Create RDS Instance
 
 # Create the RDS instance within the VPC
 ```bash
@@ -624,7 +654,7 @@ RDS_INSTANCE_STATUS=$(aws rds create-db-instance \
 echo "RDS Instance ID: $RDS_INSTANCE_STATUS"
 ```
 
-## Step 21: Wait for the RDS Instance to be Available
+## Step 22: Wait for the RDS Instance to be Available
 
 ### Wait for the RDS instance to become available
 ```bash

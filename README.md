@@ -39,47 +39,51 @@ it remains secure by not being directly accessible from the internet.
 7. **Create EKS Cluster**:
     - Create the EKS cluster with the defined subnets and security group.
 
-8. **Create IAM Role for EKS Nodes**:
+8. **Associate IAM OIDC Provider**:
+    - Associate the IAM OIDC provider with the EKS cluster.
+    - Retrieve OIDC URL and ARN for EKS Cluster.
+
+9. **Create IAM Role for EKS Nodes**:
     - Create an IAM role for the EKS nodes with necessary policies.
     - Create an instance profile and add the role to it.
 
-9. **Create Launch Template for EKS Nodes**:
+10. **Create Launch Template for EKS Nodes**:
     - Define and create a launch template for the EKS nodes with necessary configurations and user data.
 
-10. **Create Node Group**:
+11. **Create Node Group**:
     - Create a node group using the launch template and associate it with the cluster.
 
-11. **Update EKS Cluster Configuration**:
+12. **Update EKS Cluster Configuration**:
     - Update the kubeconfig file to use the new node group.
 
-12. **Apply AWS-auth ConfigMap**:
+13. **Apply AWS-auth ConfigMap**:
     - Apply the AWS-auth ConfigMap to allow nodes to join the cluster.
 
-13. **Verify the Node Group (Optional)**:
+14. **Verify the Node Group (Optional)**:
     - Verify that the nodes are properly added to the EKS cluster by checking the nodes in your cluster.
 
-14. **Create ACM Certificate**:
-   - Request an ACM certificate for the domain and configure DNS validation.
+15. **Create ACM Certificate**:
+16. Request an ACM certificate for the domain and configure DNS validation.
 
-16. **Create Security Group for ElastiCache**:
+17. **Create Security Group for ElastiCache**:
     - Create a security group for ElastiCache and authorize necessary inbound rules.
     
-17. **Create ElastiCache Subnet Group**:
+18. **Create ElastiCache Subnet Group**:
     - Create a cache subnet group for ElastiCache.
 
-18. **Create ElastiCache Cluster**:
+19. **Create ElastiCache Cluster**:
     - Create the ElastiCache cluster within the VPC.
 
-19. **Create Security Group for RDS**:
+20. **Create Security Group for RDS**:
     - Create a security group for RDS and authorize necessary inbound and outbound rules.
 
-20. **Create RDS Subnet Group**:
+21. **Create RDS Subnet Group**:
     - Create a subnet group for RDS.
 
-21. **Create RDS Instance**:
+22. **Create RDS Instance**:
     - Create the RDS instance within the VPC.
 
-22. **Wait for RDS Instance to be Available**:
+23. **Wait for RDS Instance to be Available**:
     - Wait for the RDS instance to become available and get its endpoint.
 
 
@@ -101,3 +105,8 @@ https://docs.aws.amazon.com/eks/latest/userguide/troubleshooting.html#instances-
 https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html
 
 https://docs.aws.amazon.com/cli/latest/reference/eks/create-cluster.html
+
+https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html
+
+https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI
+
