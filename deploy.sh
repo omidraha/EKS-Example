@@ -16,8 +16,14 @@ ZONE_C="us-east-2c"
 
 ### Required network settings
 
+#### Note: If you have already created your VPC, replace `VPC_CIDR` with the existing VPC CIDR and update the subnet CIDRs accordingly.
+
 ```bash
 VPC_CIDR="10.0.0.0/16"
+PRIVATE_SUBNET_1_CIDR="10.0.1.0/24"
+PRIVATE_SUBNET_2_CIDR="10.0.2.0/24"
+PRIVATE_SUBNET_3_CIDR="10.0.3.0/24"
+PUBLIC_SUBNET_1_CIDR="10.0.4.0/24"
 ```
 
 ### Required instance type
@@ -38,6 +44,7 @@ MAX_PODS="50"
 #### Replace KeyName with your key pair name
 
 ```bash
+# Use to ssh to nodes
 KeyName="my-key"
 CLUSTER_NAME="my-cluster"
 NODE_ROLE_NAME="myAmazonEKSNodeRole"
@@ -46,8 +53,10 @@ NODE_GROUP_NAME="my-node-group"
 INSTANCE_NAME_PREFIX="my-instance"
 TEMPLATE_NAME="my-eks-node-template"
 ROLE_NAME="myAmazonEKSClusterRole"
+CACHE_NODE_TYPE="cache.t4g.medium"
 CACHE_SUBNET_GROUP_NAME="my-cache-subnet-group"
 CACHE_CLUSTER_ID="my-cache-cluster"
+RDS_INSTANCE_CLASS="db.t4g.medium"
 RDS_SECURITY_GROUP_NAME="my-rds-sg"
 RDS_SUBNET_GROUP_NAME="my-rds-subnet-group"
 RDS_INSTANCE_ID="my-rds-instance"
@@ -60,33 +69,44 @@ RDS_MASTER_PASSWORD="password"
 
 #### Replace with your domain name
 
+```bash
 MAIN_DOMAIN="sub.example.com"
 SUBJECT_ALTERNATIVE_NAMES="*.$MAIN_DOMAIN"
+```
 
 ### Create a VPC
 
+Note: If you have already created your VPC, skip this part and replace VPC_ID with the existing VPC ID.
+
 ```bash
+VPC_ID="existing-vpc-id"
+```
+
+```bash
+
 VPC_ID=$(aws ec2 create-vpc --cidr-block $VPC_CIDR --region $REGION --query 'Vpc.VpcId' --output text)
 aws ec2 create-tags --resources $VPC_ID --tags Key=Name,Value=my-vpc --region $REGION
 ```
 
 ### Create Private Subnets in Three Availability Zones
 
+### Create Private Subnets in Three Availability Zones
+
 ```bash
-PRIVATE_SUBNET_ID_1=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --region $REGION --availability-zone $ZONE_A --query 'Subnet.SubnetId' --output text)
+PRIVATE_SUBNET_ID_1=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PRIVATE_SUBNET_1_CIDR --region $REGION --availability-zone $ZONE_A --query 'Subnet.SubnetId' --output text)
 aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_1 --tags Key=Name,Value=my-private-subnet-1 --region $REGION
 
-PRIVATE_SUBNET_ID_2=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.2.0/24 --region $REGION --availability-zone $ZONE_B --query 'Subnet.SubnetId' --output text)
+PRIVATE_SUBNET_ID_2=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PRIVATE_SUBNET_2_CIDR --region $REGION --availability-zone $ZONE_B --query 'Subnet.SubnetId' --output text)
 aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_2 --tags Key=Name,Value=my-private-subnet-2 --region $REGION
 
-PRIVATE_SUBNET_ID_3=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.3.0/24 --region $REGION --availability-zone $ZONE_C --query 'Subnet.SubnetId' --output text)
+PRIVATE_SUBNET_ID_3=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PRIVATE_SUBNET_3_CIDR --region $REGION --availability-zone $ZONE_C --query 'Subnet.SubnetId' --output text)
 aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_3 --tags Key=Name,Value=my-private-subnet-3 --region $REGION
 ```
 
 ### Create a Public Subnet for the NAT Gateway
 
 ```bash
-PUBLIC_SUBNET_ID=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.4.0/24  --region $REGION --availability-zone $ZONE_A --query 'Subnet.SubnetId' --output text)
+PUBLIC_SUBNET_ID=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PUBLIC_SUBNET_1_CIDR  --region $REGION --availability-zone $ZONE_A --query 'Subnet.SubnetId' --output text)
 aws ec2 create-tags --resources $PUBLIC_SUBNET_ID --tags Key=Name,Value=my-public-subnet --region $REGION
 ```
 
@@ -420,8 +440,6 @@ LAUNCH_TEMPLATE_ID=$(aws ec2 create-launch-template --launch-template-name $TEMP
 echo "Launch Template ID: $LAUNCH_TEMPLATE_ID"
 ```
 
-
-
 ## Step 11: Create Node Group
 ```bash
 NODE_GROUP_ID=$(aws eks create-nodegroup \
@@ -572,7 +590,7 @@ echo "Cache Subnet Group ID: $CACHE_SUBNET_GROUP_ID"
 ```bash
 CACHE_CLUSTER_STATUS=$(aws elasticache create-cache-cluster \
   --cache-cluster-id $CACHE_CLUSTER_ID \
-  --cache-node-type cache.t2.micro \
+  --cache-node-type $CACHE_NODE_TYPE \
   --num-cache-nodes 1 \
   --engine redis \
   --cache-subnet-group-name $CACHE_SUBNET_GROUP_NAME \
@@ -629,11 +647,12 @@ echo "RDS Subnet Group ID: $RDS_SUBNET_GROUP_ID"
 ## Step 21: Create RDS Instance
 
 # Create the RDS instance within the VPC
+
 ```bash
 
 RDS_INSTANCE_STATUS=$(aws rds create-db-instance \
   --db-instance-identifier $RDS_INSTANCE_ID \
-  --db-instance-class "db.t3.micro" \
+  --db-instance-class $RDS_INSTANCE_CLASS \
   --engine postgres \
   --allocated-storage 20 \
   --db-name $RDS_DB_NAME \
