@@ -63,27 +63,27 @@ it remains secure by not being directly accessible from the internet.
     - Verify that the nodes are properly added to the EKS cluster by checking the nodes in your cluster.
 
 15. **Create ACM Certificate**:
-16. Request an ACM certificate for the domain and configure DNS validation.
+    - Request an ACM certificate for the domain and configure DNS validation.
 
-17. **Create Security Group for ElastiCache**:
+16. **Create Security Group for ElastiCache**:
     - Create a security group for ElastiCache and authorize necessary inbound rules.
     
-18. **Create ElastiCache Subnet Group**:
+17. **Create ElastiCache Subnet Group**:
     - Create a cache subnet group for ElastiCache.
 
-19. **Create ElastiCache Cluster**:
+18. **Create ElastiCache Cluster**:
     - Create the ElastiCache cluster within the VPC.
 
-20. **Create Security Group for RDS**:
+19. **Create Security Group for RDS**:
     - Create a security group for RDS and authorize necessary inbound and outbound rules.
 
-21. **Create RDS Subnet Group**:
+20. **Create RDS Subnet Group**:
     - Create a subnet group for RDS.
 
-22. **Create RDS Instance**:
+21. **Create RDS Instance**:
     - Create the RDS instance within the VPC.
 
-23. **Wait for RDS Instance to be Available**:
+22. **Wait for RDS Instance to be Available**:
     - Wait for the RDS instance to become available and get its endpoint.
 
 
