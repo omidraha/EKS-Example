@@ -50,12 +50,19 @@ CLUSTER_NAME="my-cluster"
 NODE_ROLE_NAME="myAmazonEKSNodeRole"
 INSTANCE_PROFILE_NAME="myAmazonEKSNodeInstanceProfile"
 NODE_GROUP_NAME="my-node-group"
+#
 INSTANCE_NAME_PREFIX="my-instance"
 TEMPLATE_NAME="my-eks-node-template"
 ROLE_NAME="myAmazonEKSClusterRole"
+#
+NAMESPACE="my-ns"
+SERVICE_ACCOUNT_NAME="my-service-account"
+EKS_ALB_INGRESS_ROLE_NAME="my-eks-alb-ingress-controller-role"
+#
 CACHE_NODE_TYPE="cache.t4g.medium"
 CACHE_SUBNET_GROUP_NAME="my-cache-subnet-group"
 CACHE_CLUSTER_ID="my-cache-cluster"
+#
 RDS_INSTANCE_CLASS="db.t4g.medium"
 RDS_SECURITY_GROUP_NAME="my-rds-sg"
 RDS_SUBNET_GROUP_NAME="my-rds-subnet-group"
@@ -547,6 +554,154 @@ while true; do
         sleep 30
     fi
 done
+```
+
+## Step 16: Create IAM Policy for AWS Load Balancer Controller
+
+#### This step involves creating an IAM policy required for the AWS Load Balancer Controller to function. The policy grants necessary permissions for managing load balancers within the EKS cluster.
+
+### Create an IAM policy JSON file:
+
+#### Download the IAM policy JSON file from the aws specified URL, which contains the necessary permissions for the AWS Load Balancer Controller.
+
+```bash
+curl -o aws-load-balancer-controller-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.7.2/docs/install/iam_policy.json
+```
+
+#### Create the IAM policy:
+
+#### Create the IAM policy using the downloaded JSON file.
+
+```bash
+POLICY_ARN=$(aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPolicy \ 
+            --policy-document file://aws-load-balancer-controller-policy.json --query 'Policy.Arn' --output text)
+```
+
+### Step 17: Create Kubernetes Namespace
+
+#### Create the namespace:
+
+```bash
+kubectl create namespace $NAMESPACE
+```
+
+### Step 18: Create Service Account
+
+#### Create the service account YAML file
+
+#### Generate a YAML file for the Service Account and apply it using kubectl.
+
+```bash
+cat <<EOF > service-account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: $SERVICE_ACCOUNT_NAME
+  namespace: $NAMESPACE
+EOF
+```
+
+```bash
+kubectl apply -f service-account.yaml
+```
+
+### Step 19: Create IAM Role for AWS Load Balancer Controller
+
+#### Creating an IAM Role that the AWS Load Balancer Controller can assume, allowing it to manage AWS resources securely. The role includes a trust relationship with the Kubernetes service account to ensure only the specified service account can use the role.
+
+```bash
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+OIDC_PROVIDER=$(aws eks describe-cluster --name $CLUSTER_NAME --region $REGION --query "cluster.identity.oidc.issuer" --output text | sed -e "s/^https:\/\///")
+```
+
+#### Create a trust relationship JSON file
+#### Define the trust relationship between the IAM role and the OIDC provider for the EKS cluster.
+
+```bash
+cat <<EOF > trust-relationship.json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::$AWS_ACCOUNT_ID:oidc-provider/$OIDC_PROVIDER"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "$OIDC_PROVIDER:aud": "sts.amazonaws.com",
+          "$OIDC_PROVIDER:sub": "system:serviceaccount:$NAMESPACE:$SERVICE_ACCOUNT_NAME"
+        }
+      }
+    }
+  ]
+}
+EOF
+```
+
+#### Create the IAM role
+
+#### Create the IAM role with the trust relationship policy document.
+
+```bash
+ROLE_ARN=$(aws iam create-role --role-name $EKS_ALB_INGRESS_ROLE_NAME --assume-role-policy-document file://trust-relationship.json --description "IAM role for ALB ingress controller" --query 'Role.Arn' --output text)
+
+aws iam update-assume-role-policy --role-name $EKS_ALB_INGRESS_ROLE_NAME --policy-document file://trust-relationship.json
+
+kubectl annotate serviceaccount $SERVICE_ACCOUNT_NAME -n $NAMESPACE eks.amazonaws.com/role-arn=arn:aws:iam::$AWS_ACCOUNT_ID:role/$EKS_ALB_INGRESS_ROLE_NAME --overwrite
+```
+
+#### Attach the policy to the IAM role:
+
+#### Attach the previously created IAM policy to the IAM role.
+
+```bash
+aws iam attach-role-policy --role-name $EKS_ALB_INGRESS_ROLE_NAME --policy-arn=arn:aws:iam::$AWS_ACCOUNT_ID:policy/AWSLoadBalancerControllerIAMPolicy
+```
+
+### Step 20: Annotate the Service Account
+
+#### Annotate the Kubernetes Service Account with the IAM role ARN to establish the relationship between the service account and the IAM role.
+
+```bash
+kubectl annotate serviceaccount -n $NAMESPACE $SERVICE_ACCOUNT_NAME eks.amazonaws.com/role-arn=arn:aws:iam::$AWS_ACCOUNT_ID:role/$EKS_ALB_INGRESS_ROLE_NAME
+```
+
+#### Verify the IAM role:
+#### Check the IAM role to ensure the trust relationship policy is correctly applied.
+
+```bash
+aws iam get-role --role-name $EKS_ALB_INGRESS_ROLE_NAME --query Role.AssumeRolePolicyDocument
+```
+
+### Step 21: Install AWS Load Balancer Controller with Helm
+
+#### Install the AWS Load Balancer Controller using Helm, a package manager for Kubernetes.
+
+#### Add the Helm repository and update it:
+#### Add the EKS Helm repository and update the Helm repositories.
+
+```bash
+helm repo add eks https://aws.github.io/eks-charts
+helm repo update
+```
+
+#### Install the AWS Load Balancer Controller:
+#### Install the AWS Load Balancer Controller Helm chart with the required configurations.
+
+```bash
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n $NAMESPACE \
+  --set clusterName=$CLUSTER_NAME \
+  --set serviceAccount.create=false \
+  --set region=$REGION \
+  --set vpcId=$VPC_ID \
+  --set serviceAccount.name=$SERVICE_ACCOUNT_NAME \
+  --set replicaCount=1 \
+  --set podLabels.app=aws-lb-controller \
+  --set autoDiscoverAwsRegion=true \
+  --set autoDiscoverAwsVpcID=true \
+  --set keepTLSSecret=true
 ```
 
 ## Step 16: Create Security Group for ElastiCache

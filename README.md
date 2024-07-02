@@ -2,13 +2,13 @@
 
 ## Purpose
 
-This script automates the creation and configuration of an Amazon EKS cluster distributed across three availability zones. 
+This script automates the creation and configuration of an Amazon EKS cluster distributed across three availability
+zones.
 
-The setup includes a private VPC with private subnets for the cluster nodes and a public subnet for the NAT gateway. 
+The setup includes a private VPC with private subnets for the cluster nodes and a public subnet for the NAT gateway.
 
-This configuration ensures that while the cluster can access the internet for updates and downloads, 
+This configuration ensures that while the cluster can access the internet for updates and downloads,
 it remains secure by not being directly accessible from the internet.
-
 
 ## Steps Overview
 
@@ -65,27 +65,47 @@ it remains secure by not being directly accessible from the internet.
 15. **Create ACM Certificate**:
     - Request an ACM certificate for the domain and configure DNS validation.
 
-16. **Create Security Group for ElastiCache**:
+16. **Create IAM Policy for AWS Load Balancer Controller**:
+    - Creating an IAM policy required for the AWS Load Balancer Controller to function.
+
+17. **Create Kubernetes Namespace**:
+    - Create Kubernetes Namespace.
+
+18. **Create Service Account**:
+    - Generate a YAML file for the Service Account and apply it using kubectl.
+
+19. **Create IAM Role for AWS Load Balancer Controller**:
+    - Create a trust relationship JSON file
+    - Create the IAM role with the trust relationship policy document.
+    - Attach the policy to the IAM role
+
+20. **Annotate the Service Account**:
+    - Annotate the Kubernetes Service Account with the IAM role ARN to establish the relationship between the service
+      account and the IAM role.
+
+21. **Install AWS Load Balancer Controller with Helm**:
+    - Install the AWS Load Balancer Controller Helm chart with the required configurations.
+
+22. **Create Security Group for ElastiCache**:
     - Create a security group for ElastiCache and authorize necessary inbound rules.
-    
-17. **Create ElastiCache Subnet Group**:
+
+23. **Create ElastiCache Subnet Group**:
     - Create a cache subnet group for ElastiCache.
 
-18. **Create ElastiCache Cluster**:
+24. **Create ElastiCache Cluster**:
     - Create the ElastiCache cluster within the VPC.
 
-19. **Create Security Group for RDS**:
+25. **Create Security Group for RDS**:
     - Create a security group for RDS and authorize necessary inbound and outbound rules.
 
-20. **Create RDS Subnet Group**:
+26. **Create RDS Subnet Group**:
     - Create a subnet group for RDS.
 
-21. **Create RDS Instance**:
+27. **Create RDS Instance**:
     - Create the RDS instance within the VPC.
 
-22. **Wait for RDS Instance to be Available**:
+28. **Wait for RDS Instance to be Available**:
     - Wait for the RDS instance to become available and get its endpoint.
-
 
 ### Notes
 
@@ -109,4 +129,8 @@ https://docs.aws.amazon.com/cli/latest/reference/eks/create-cluster.html
 https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html
 
 https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI
+
+https://docs.aws.amazon.com/eks/latest/userguide/lbc-helm.html#lbc-helm-install
+
+
 
