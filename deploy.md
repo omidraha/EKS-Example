@@ -16,7 +16,7 @@ ZONE_C="us-east-2c"
 
 ### Required network settings
 
-#### Note: If you have already created your VPC, replace `VPC_CIDR` with the existing VPC CIDR and update the subnet CIDRs accordingly.
+###### Note: If you have already created your VPC, replace `VPC_CIDR` with the existing VPC CIDR and update the subnet CIDRs accordingly.
 
 ```bash
 VPC_CIDR="10.0.0.0/16"
@@ -41,7 +41,7 @@ MAX_PODS="50"
 
 ### Define variable for resource name
 
-#### Replace KeyName with your key pair name
+###### Replace KeyName with your key pair name
 
 ```bash
 # Use to ssh to nodes
@@ -69,12 +69,13 @@ RDS_SUBNET_GROUP_NAME="my-rds-subnet-group"
 RDS_INSTANCE_ID="my-rds-instance"
 RDS_DB_NAME="mydatabase"
 RDS_MASTER_USERNAME="username"
+# Change this
 RDS_MASTER_PASSWORD="password"
 ```
 
 ### Define Domain Name
 
-#### Replace with your domain name
+### Replace with your domain name
 
 ```bash
 MAIN_DOMAIN="sub.example.com"
@@ -83,7 +84,7 @@ SUBJECT_ALTERNATIVE_NAMES="*.$MAIN_DOMAIN"
 
 ### Create a VPC
 
-Note: If you have already created your VPC, skip this part and replace VPC_ID with the existing VPC ID.
+###### Note: If you have already created your VPC, skip this part and replace VPC_ID with the existing VPC ID.
 
 ```bash
 VPC_ID="existing-vpc-id"
@@ -94,8 +95,6 @@ VPC_ID="existing-vpc-id"
 VPC_ID=$(aws ec2 create-vpc --cidr-block $VPC_CIDR --region $REGION --query 'Vpc.VpcId' --output text)
 aws ec2 create-tags --resources $VPC_ID --tags Key=Name,Value=my-vpc --region $REGION
 ```
-
-### Create Private Subnets in Three Availability Zones
 
 ### Create Private Subnets in Three Availability Zones
 
@@ -273,7 +272,7 @@ CLUSTER_ARN=$(aws eks create-cluster \
 aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION
 ```
 
-#### Note: You need to be in the current VPC for the commands to use `kubectl`.
+###### Note: You need to be in the current VPC for the commands to use `kubectl`.
 
 ### Get cluster nodes and pods
 
@@ -290,22 +289,22 @@ aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION
 eksctl utils associate-iam-oidc-provider --cluster  $CLUSTER_NAME --region $REGION  --approve
 ```
 
-#### Retrieve the OIDC URL for the EKS cluster
+### Retrieve the OIDC URL for the EKS cluster
 
 ```bash
 oidc_url=$(aws eks describe-cluster --name $CLUSTER_NAME --region $REGION --query "cluster.identity.oidc.issuer" --output text)
 ```
-#### Extract the OIDC ID from the URL
+### Extract the OIDC ID from the URL
 
 ```bash
 oidc_id=$(echo $oidc_url | cut -d '/' -f5)
 ```
-#### Get the OIDC ARN by matching the OIDC ID with existing providers
+### Get the OIDC ARN by matching the OIDC ID with existing providers
 
 ```bash
 oidc_arn=$(aws iam list-open-id-connect-providers | grep $oidc_id | cut -d '"' -f4)
 ```
-#### Output the OIDC URL and ARN
+### Output the OIDC URL and ARN
 
 ```bash
 echo "OIDC URL: $oidc_url"
@@ -373,7 +372,9 @@ echo "CA_BUNDLE: $CA_BUNDLE"
 echo "API_SERVER_ENDPOINT: $API_SERVER_ENDPOINT"
 echo "DNS_CLUSTER_IP: $DNS_CLUSTER_IP"
 ```
+
 ### Define User data script
+
 ```bash
 USER_DATA=$(cat <<EOF
 MIME-Version: 1.0
@@ -409,10 +410,13 @@ EOF
 ```
 
 ### Base64 encode user data
+
 ```bash
 USER_DATA_BASE64=$(echo "$USER_DATA" | base64 | tr -d '\n')
 ```
+
 ### Create launch template
+
 ```bash
 LAUNCH_TEMPLATE_ID=$(aws ec2 create-launch-template --launch-template-name $TEMPLATE_NAME --version-description "EKS Node Template" --launch-template-data '{
   "ImageId": "'$IMAGE_ID'",
@@ -507,10 +511,10 @@ EOF
 
 ## Step 14: (Optional) Verify the Node Group
 
-You can verify that the nodes are properly added to your EKS cluster by checking the nodes in your cluster:
+###### You can verify that the nodes are properly added to your EKS cluster by checking the nodes in your cluster:
 
 ```bash
-kubectl get nodes
+kubectl get nodes -o wide
 ```
 
 ## Step 15: Create certificate
@@ -558,19 +562,19 @@ done
 
 ## Step 16: Create IAM Policy for AWS Load Balancer Controller
 
-#### This step involves creating an IAM policy required for the AWS Load Balancer Controller to function. The policy grants necessary permissions for managing load balancers within the EKS cluster.
+###### This step involves creating an IAM policy required for the AWS Load Balancer Controller to function. The policy grants necessary permissions for managing load balancers within the EKS cluster.
 
 ### Create an IAM policy JSON file:
 
-#### Download the IAM policy JSON file from the aws specified URL, which contains the necessary permissions for the AWS Load Balancer Controller.
+###### Download the IAM policy JSON file from the aws specified URL, which contains the necessary permissions for the AWS Load Balancer Controller.
 
 ```bash
 curl -o aws-load-balancer-controller-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.7.2/docs/install/iam_policy.json
 ```
 
-#### Create the IAM policy:
+### Create the IAM policy:
 
-#### Create the IAM policy using the downloaded JSON file.
+###### Create the IAM policy using the downloaded JSON file.
 
 ```bash
 POLICY_ARN=$(aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPolicy \ 
@@ -579,7 +583,7 @@ POLICY_ARN=$(aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPol
 
 ### Step 17: Create Kubernetes Namespace
 
-#### Create the namespace:
+### Create the namespace:
 
 ```bash
 kubectl create namespace $NAMESPACE
@@ -589,7 +593,7 @@ kubectl create namespace $NAMESPACE
 
 #### Create the service account YAML file
 
-#### Generate a YAML file for the Service Account and apply it using kubectl.
+###### Generate a YAML file for the Service Account and apply it using kubectl.
 
 ```bash
 cat <<EOF > service-account.yaml
@@ -607,15 +611,15 @@ kubectl apply -f service-account.yaml
 
 ### Step 19: Create IAM Role for AWS Load Balancer Controller
 
-#### Creating an IAM Role that the AWS Load Balancer Controller can assume, allowing it to manage AWS resources securely. The role includes a trust relationship with the Kubernetes service account to ensure only the specified service account can use the role.
+###### Creating an IAM Role that the AWS Load Balancer Controller can assume, allowing it to manage AWS resources securely. The role includes a trust relationship with the Kubernetes service account to ensure only the specified service account can use the role.
 
 ```bash
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
 OIDC_PROVIDER=$(aws eks describe-cluster --name $CLUSTER_NAME --region $REGION --query "cluster.identity.oidc.issuer" --output text | sed -e "s/^https:\/\///")
 ```
 
-#### Create a trust relationship JSON file
-#### Define the trust relationship between the IAM role and the OIDC provider for the EKS cluster.
+### Create a trust relationship JSON file
+###### Define the trust relationship between the IAM role and the OIDC provider for the EKS cluster.
 
 ```bash
 cat <<EOF > trust-relationship.json
@@ -640,9 +644,9 @@ cat <<EOF > trust-relationship.json
 EOF
 ```
 
-#### Create the IAM role
+### Create the IAM role
 
-#### Create the IAM role with the trust relationship policy document.
+###### Create the IAM role with the trust relationship policy document.
 
 ```bash
 ROLE_ARN=$(aws iam create-role --role-name $EKS_ALB_INGRESS_ROLE_NAME --assume-role-policy-document file://trust-relationship.json --description "IAM role for ALB ingress controller" --query 'Role.Arn' --output text)
@@ -654,7 +658,7 @@ kubectl annotate serviceaccount $SERVICE_ACCOUNT_NAME -n $NAMESPACE eks.amazonaw
 
 #### Attach the policy to the IAM role:
 
-#### Attach the previously created IAM policy to the IAM role.
+###### Attach the previously created IAM policy to the IAM role.
 
 ```bash
 aws iam attach-role-policy --role-name $EKS_ALB_INGRESS_ROLE_NAME --policy-arn=arn:aws:iam::$AWS_ACCOUNT_ID:policy/AWSLoadBalancerControllerIAMPolicy
@@ -662,14 +666,14 @@ aws iam attach-role-policy --role-name $EKS_ALB_INGRESS_ROLE_NAME --policy-arn=a
 
 ### Step 20: Annotate the Service Account
 
-#### Annotate the Kubernetes Service Account with the IAM role ARN to establish the relationship between the service account and the IAM role.
+###### Annotate the Kubernetes Service Account with the IAM role ARN to establish the relationship between the service account and the IAM role.
 
 ```bash
 kubectl annotate serviceaccount -n $NAMESPACE $SERVICE_ACCOUNT_NAME eks.amazonaws.com/role-arn=arn:aws:iam::$AWS_ACCOUNT_ID:role/$EKS_ALB_INGRESS_ROLE_NAME
 ```
 
-#### Verify the IAM role:
-#### Check the IAM role to ensure the trust relationship policy is correctly applied.
+### Verify the IAM role:
+###### Check the IAM role to ensure the trust relationship policy is correctly applied.
 
 ```bash
 aws iam get-role --role-name $EKS_ALB_INGRESS_ROLE_NAME --query Role.AssumeRolePolicyDocument
@@ -677,18 +681,18 @@ aws iam get-role --role-name $EKS_ALB_INGRESS_ROLE_NAME --query Role.AssumeRoleP
 
 ### Step 21: Install AWS Load Balancer Controller with Helm
 
-#### Install the AWS Load Balancer Controller using Helm, a package manager for Kubernetes.
+###### Install the AWS Load Balancer Controller using Helm, a package manager for Kubernetes.
 
-#### Add the Helm repository and update it:
-#### Add the EKS Helm repository and update the Helm repositories.
+### Add the Helm repository and update it:
+###### Add the EKS Helm repository and update the Helm repositories.
 
 ```bash
 helm repo add eks https://aws.github.io/eks-charts
 helm repo update
 ```
 
-#### Install the AWS Load Balancer Controller:
-#### Install the AWS Load Balancer Controller Helm chart with the required configurations.
+### Install the AWS Load Balancer Controller:
+###### Install the AWS Load Balancer Controller Helm chart with the required configurations.
 
 ```bash
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n $NAMESPACE \
@@ -737,7 +741,6 @@ CACHE_SUBNET_GROUP_ID=$(aws elasticache create-cache-subnet-group \
 echo "Cache Subnet Group ID: $CACHE_SUBNET_GROUP_ID"
 ```
 
-
 ## Step 18: Create ElastiCache Cluster
 
 ### Create the ElastiCache cluster within the VPC
@@ -773,7 +776,8 @@ aws ec2 create-tags --resources $RDS_SG_ID --tags Key=Name,Value=my-rds-sg --reg
 ```bash
 aws ec2 authorize-security-group-ingress --group-id $RDS_SG_ID --protocol tcp --port 5432 --source-group $SG_ID --region $REGION
 ```
-# Authorize outbound rules for the RDS security group
+
+### Authorize outbound rules for the RDS security group
 
 ```bash
 aws ec2 authorize-security-group-egress --group-id $RDS_SG_ID --protocol -1 --port all --cidr 0.0.0.0/0 --region $REGION
@@ -801,7 +805,7 @@ echo "RDS Subnet Group ID: $RDS_SUBNET_GROUP_ID"
 
 ## Step 21: Create RDS Instance
 
-# Create the RDS instance within the VPC
+### Create the RDS instance within the VPC
 
 ```bash
 
@@ -831,11 +835,13 @@ echo "RDS Instance ID: $RDS_INSTANCE_STATUS"
 ## Step 22: Wait for the RDS Instance to be Available
 
 ### Wait for the RDS instance to become available
+
 ```bash
 aws rds wait db-instance-available --db-instance-identifier $RDS_INSTANCE_ID --region $REGION
 ```
 
 ### Get the endpoint of the RDS instance
+
 ```bash
 RDS_ENDPOINT=$(aws rds describe-db-instances --db-instance-identifier $RDS_INSTANCE_ID --region $REGION --query 'DBInstances[0].Endpoint.Address' --output text)
 ```
