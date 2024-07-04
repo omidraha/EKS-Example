@@ -132,5 +132,10 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPe
 
 https://docs.aws.amazon.com/eks/latest/userguide/lbc-helm.html#lbc-helm-install
 
+https://github.com/pulumi/pulumi-eks/pull/320
 
+https://marcincuber.medium.com/amazon-eks-with-oidc-provider-iam-roles-for-kubernetes-services-accounts-59015d15cb0c
 
+https://aws.amazon.com/blogs/opensource/introducing-fine-grained-iam-roles-service-accounts/
+
+https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc_verify-thumbprint.html
