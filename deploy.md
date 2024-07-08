@@ -100,13 +100,13 @@ aws ec2 create-tags --resources $VPC_ID --tags Key=Name,Value=my-vpc --region $R
 
 ```bash
 PRIVATE_SUBNET_ID_1=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PRIVATE_SUBNET_1_CIDR --region $REGION --availability-zone $ZONE_A --query 'Subnet.SubnetId' --output text)
-aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_1 --tags Key=Name,Value=my-private-subnet-1 --region $REGION
+aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_1 --tags Key=Name,Value=my-private-subnet-1 Key=kubernetes.io/role/internal-elb,Value=1 --region $REGION
 
 PRIVATE_SUBNET_ID_2=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PRIVATE_SUBNET_2_CIDR --region $REGION --availability-zone $ZONE_B --query 'Subnet.SubnetId' --output text)
-aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_2 --tags Key=Name,Value=my-private-subnet-2 --region $REGION
+aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_2 --tags Key=Name,Value=my-private-subnet-2 Key=kubernetes.io/role/internal-elb,Value=1  --region $REGION
 
 PRIVATE_SUBNET_ID_3=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block $PRIVATE_SUBNET_3_CIDR --region $REGION --availability-zone $ZONE_C --query 'Subnet.SubnetId' --output text)
-aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_3 --tags Key=Name,Value=my-private-subnet-3 --region $REGION
+aws ec2 create-tags --resources $PRIVATE_SUBNET_ID_3 --tags Key=Name,Value=my-private-subnet-3 Key=kubernetes.io/role/internal-elb,Value=1  --region $REGION
 ```
 
 ### Create a Public Subnet for the NAT Gateway
