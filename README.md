@@ -10,6 +10,10 @@ The setup includes a private VPC with private subnets for the cluster nodes and 
 This configuration ensures that while the cluster can access the internet for updates and downloads,
 it remains secure by not being directly accessible from the internet.
 
+## Architecture Diagram
+
+![diagram.png](./diagram.png)
+
 ## Steps Overview
 
 1. **Create VPC and Subnets**:
