@@ -143,3 +143,8 @@ https://marcincuber.medium.com/amazon-eks-with-oidc-provider-iam-roles-for-kuber
 https://aws.amazon.com/blogs/opensource/introducing-fine-grained-iam-roles-service-accounts/
 
 https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc_verify-thumbprint.html
+
+Enable outbound IPv6 traffic using an egress-only internet gateway
+
+- https://docs.aws.amazon.com/vpc/latest/userguide/egress-only-internet-gateway.html
+- https://stackoverflow.com/a/54079844
