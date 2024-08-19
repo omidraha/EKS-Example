@@ -112,11 +112,12 @@ it remains secure by not being directly accessible from the internet.
     - Wait for the RDS instance to become available and get its endpoint.
 
 ### Notes
-
 ```bash
+
 sudo amazon-linux-extras install epel -y
 sudo yum install -y redis
 ```
+- Image should be set from the https://cloud-images.ubuntu.com/docs/aws/eks/
 
 ### Links
 
